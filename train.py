@@ -354,7 +354,7 @@ def train_progressive_gan(
             minibatch_size=sched.minibatch // config.num_gpus)
         misc.save_image_grid(
             grid_fakes,
-            os.path.join(result_subdir, 'images', '%03d' % sched.minibatch,
+            os.path.join(result_subdir, 'images',
                          'fakes%06d.png' % (cur_nimg // 1000)),
             drange=drange_net,
             grid_size=grid_size)

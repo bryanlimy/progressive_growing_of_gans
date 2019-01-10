@@ -714,9 +714,16 @@ def create_celebahq(tfrecord_dir,
 
 
 def get_image(filename):
-  scale_size = (1024, 1024)
+  """ Get image with filename in numpy format
+  - None squared image get crop in the middle
+  - Image smaller than 1024x1024 return None
+  """
+  size = 1024
   img = Image.open(filename)
   width, height = img.size
+
+  if min(width, height) < size:
+    return None
 
   # crop center if image is not squared
   if width != height:
@@ -734,8 +741,8 @@ def get_image(filename):
       lower = width + upper
     img = img.crop((left, upper, right, lower))
 
-  # scale image to scale_size
-  img = img.resize(scale_size, Image.ANTIALIAS)
+  # scale image to (1024, 1024)
+  img = img.resize((size, size), Image.ANTIALIAS)
 
   return np.asarray(img)
 
@@ -746,12 +753,15 @@ def create_from_images(tfrecord_dir, image_dir, shuffle):
   if len(image_filenames) == 0:
     error('No input images found')
 
+  count = 0
   with TFRecordExporter(tfrecord_dir, len(image_filenames)) as tfr:
     order = tfr.choose_shuffled_order() if shuffle else np.arange(
         len(image_filenames))
     for idx in range(order.size):
       filename = image_filenames[order[idx]]
       img = get_image(filename)
+      if img is None:
+        continue
 
       channels = img.shape[-1]
       if channels == 1:
@@ -759,6 +769,9 @@ def create_from_images(tfrecord_dir, image_dir, shuffle):
       else:
         img = img.transpose(2, 0, 1)  # HWC => CHW
       tfr.add_image(img)
+      count += 1
+
+  print("processed %d images" % count)
 
 
 #----------------------------------------------------------------------------
