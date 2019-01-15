@@ -8,7 +8,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.flags.DEFINE_string("checkpoint", None, "saved model to inference from")
 tf.flags.DEFINE_string("output_dir", "output",
                        "output directory for generated images")
-
+tf.flags.DEFINE_integer("num_images", 100, "number of images to generate")
 
 def main():
   # Initialize TensorFlow session.
@@ -18,17 +18,19 @@ def main():
   with open(FLAGS.checkpoint, 'rb') as file:
     G, D, Gs = pickle.load(file)
 
-  # Generate latent vectors.
-  latents = np.random.RandomState(1000).randn(
-      1000, *Gs.input_shapes[0][1:])  # 1000 random latents
-  latents = latents[[477, 56, 83, 887, 583, 391, 86, 340, 341,
-                     415]]  # hand-picked top-10
+  # create output_dir if not exists
+  if not os.path.isdir(FLAGS.output_dir):
+    os.mkdir(FLAGS.output_dir)
 
+  # Generate latent vectors.
+  latents = np.random.RandomState(1000).randn(FLAGS.num_images, *Gs.input_shapes[0][1:])
   # Generate dummy labels (not used by the official networks).
   labels = np.zeros([latents.shape[0]] + Gs.input_shapes[1][1:])
-
+  
+  images = np.zeros([FLAGS.num_images] + Gs.output_shapes[0][1:])
   # Run the generator to produce a set of images.
-  images = Gs.run(latents, labels)
+  for i in range(FLAGS.num_images):
+      images[i] = Gs.run(np.asarray([latents[i]]), np.asarray([labels[i]]))
 
   # Convert images to PIL-compatible format.
   images = np.clip(np.rint((images + 1.0) / 2.0 * 255.0), 0.0, 255.0).astype(
